@@ -1,4 +1,3 @@
-
 //전자회로설계과 2학년 1반 16번 정현민
 //JOptionPane.showMessageDialog - 경고창
 //status바 수정하기
@@ -11,17 +10,24 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.net.*;
 
-public class IPTracker extends JFrame {
-
+public class IPTracker extends JFrame{
+	
+	String getPort;
+	
 	public IPTracker() {
 		super();
 		Font myFont = new Font("Consolas", Font.BOLD, 10);
 		JPanel p1 = new JPanel();
-		String titles[] = new String[] { "IP", "Ping", "Hostname", "TTL", "Ports[0+]" };
+		String titles[] = new String[] { "IP", "Hostname", "Ping", "TTL", "Ports[0+]" };
 
 		setTitle("IP Tracker");
 
@@ -210,6 +216,11 @@ public class IPTracker extends JFrame {
 		tb1.setLayout(new FlowLayout(FlowLayout.LEFT));
 		JToolBar tb2 = new JToolBar();
 		tb2.setLayout(new FlowLayout(FlowLayout.LEFT));
+		JPanel p2 = new JPanel(new BorderLayout());
+		p2.add(tb1, BorderLayout.NORTH);
+		p2.add(tb2, BorderLayout.SOUTH);
+
+		add(p2, BorderLayout.NORTH);
 
 		JLabel lbRangStart = new JLabel("IP Range : ");
 		JTextField tfRangStart = new JTextField(10);
@@ -243,12 +254,7 @@ public class IPTracker extends JFrame {
 		tb2.add(btup);
 		tb2.add(cbOption);
 		tb2.add(btStart);
-
-		JPanel p2 = new JPanel(new BorderLayout());
-		p2.add(tb1, BorderLayout.NORTH);
-		p2.add(tb2, BorderLayout.SOUTH);
-
-		add(p2, BorderLayout.NORTH);
+		
 
 		String myIP = null;
 		String myHostname = null;
@@ -262,19 +268,76 @@ public class IPTracker extends JFrame {
 		}
 		String fixedIP = myIP.substring(0, myIP.lastIndexOf("."));
 		tfRangStart.setText(fixedIP + ".1");
-		tfRangend.setText(fixedIP + ".255");
+		tfRangend.setText(fixedIP + ".254");
 		tfhostname.setText(myHostname);
-		System.out.println(myIP + "          " + myHostname);
+		System.out.println("IP : " + myIP + "  /  Hostname : " + myHostname);
 		
+		//수정 필요 - Thread로 구현해야할듯
 		btStart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				for (int i = 1; i < 256; i++) {
+				JOptionPane.showMessageDialog(null, "잠시만 기다리십시오...", "IP스캔중",
+						JOptionPane.INFORMATION_MESSAGE);
+				for (int i = 1; i < 255; i++) {
+						stats [i-1][0] = fixedIP + "." + i;
+				}
+				t1.updateUI();
+				thread[] pi = new thread[255];
+				for(int i=1; i<=254; i++) {
+					pi[i-1] = new thread(fixedIP + (i));
+					pi[i-1].start();
+				}
+				for(int i=1; i<=254; i++) {
+					Object[] msg = pi[i-1].getMsg();
+					if (msg[1] != null) {
+						//port SCanner
+						
+						ExecutorService es = Executors.newFixedThreadPool(20);
+						String ip = "127.0.0.1";
+						int timeout = 200;
+						ArrayList<Future<portScanner>> futures = new ArrayList<>();
+						for (int port = 1; port <= 1024; port++) {
+							futures.add(portlsOpen(es, ip, port, timeout));
+						}
+						try {
+							es.awaitTermination(200L, TimeUnit.MILLISECONDS);
+							int openPorts = 0;
+							for (final Future<portScanner> f: futures) {
+								if (f.get().isOpen()) {
+									openPorts++;
+									getPort = Integer.toString(f.get().getPort());
+									break;
+								}
+							}
+						} catch(Exception ee) {
+							ee.printStackTrace();
+							JOptionPane.showMessageDialog(null, "예기치 못한 에러가 발생하였습니다.\n프로그램을 재실행하시길 바랍니다.)",
+									"Unexpected Error",JOptionPane.WARNING_MESSAGE);
+						}
 
-					try {
-						String pingCmd = "ping -a " + fixedIP + i;
-						Runtime r = Runtime.getRuntime();
-						Process p = r.exec(pingCmd);
-
+						stats[i-1][4] = getPort;
+					}
+		
+					if (msg[1] == null) {
+						msg[3] = "[n/a]";
+						msg[1] = "[n/s]";
+						msg[2] = "[n/s]";
+						stats[i-1][4] = "[n/s]";
+						//t1.getColumnModel().getColumn(i).setCellRenderer();
+					} else if (msg[1] == null) {
+						msg[1] = "[n/a]";
+					}
+					//stats[i][0] = msg[0];
+					stats[i-1][1] = msg[3];
+					stats[i-1][2] = msg[1];
+					stats[i-1][3] = msg[2];
+				}
+				t1.repaint();
+				JOptionPane.showMessageDialog(null, "검색이 끝났습니다!", "IP찾기 성공",
+						JOptionPane.INFORMATION_MESSAGE);
+				
+				/*for (int i = 1; i < 256; i++) {
+					try{
+						stats [i-1][0] = fixedIP + "." + i;
 						BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
 						String inputLine;
 						while ((inputLine = in.readLine()) != null) {
@@ -284,25 +347,43 @@ public class IPTracker extends JFrame {
 							Matcher matcher = pattern.matcher(inputLine);
 
 							if (matcher.find()) {
-								stats[i][3] = matcher.group(1);
+								stats[i-1][3] = matcher.group(1);
 							}
 							if (matcher2.find()) {
-								stats[i][1] = matcher2.group(1);
-								stats[i][2] = matcher2.group(2);
+								stats[i-1][1] = matcher2.group(1);
+								stats[i-1][2] = matcher2.group(2);
 							}
 							System.out.println("실행중임, " + i +"번째");
-						}
-
-						stats[i][0] = fixedIP + i;
+							t1.updateUI();
+						//}
 						
 					} catch (Exception e) {
 						e.printStackTrace();
+						JOptionPane.showMessageDialog(null, "예기치 못한 에러가 발생하였습니다.\n프로그램을 재실행하시길 바랍니다.)",
+								"Unexpected Error",JOptionPane.WARNING_MESSAGE);
 					}
-			}
+			}*/
+				t1.updateUI();
 		}
 		});
 		
 	}
+	
+	public static Future<portScanner> portlsOpen(final ExecutorService es, final String ip, final int port, final int timeout){
+		return es.submit(new Callable<portScanner>() {
+			public portScanner call() {
+				try {
+					Socket socket = new Socket();
+					socket.connect(new InetSocketAddress(ip, port), timeout);
+					socket.close();
+					return new portScanner(port, true);
+				}catch (Exception ex) {
+					return new portScanner(port, false);
+				}
+			}
+		});
+	}
+	
 
 	public Object[][] intializeTableData() {
 		Object[][] results = new Object[254][5];
@@ -315,4 +396,99 @@ public class IPTracker extends JFrame {
 
 
 }
+
+class thread extends Thread {
+	private Object[] msg;
+	private String ip;
+
+	public thread (String ip) {
+		this.ip = ip;
+		msg = new Object[4];
+	}
+
+	public void run() {
+		InputStream is = null;
+		BufferedReader br = null;
+		try {
+			Runtime run = Runtime.getRuntime();
+			Process p = run.exec("ping -a " + ip);
+			msg[0] = ip;
+			is = p.getInputStream();
+			br = new BufferedReader(new InputStreamReader(is));
+			String line = null;
+			while ((line = br.readLine()) != null) {
+				// System.out.println(line); // line을 임시 출력해본다.
+				if (line.indexOf("[") >= 0) {
+					msg[3] = line.substring(5, line.indexOf("["));
+				}
+				if (line.indexOf("ms") >= 0) {
+					// Pattern pattern =
+					// Pattern.compile("(\\d+ms)(\\s+)(TTL=\\d+)",Pattern.CASE_INSENSTIVE);
+					// Matcher matcher = pattern.matcher(line);
+					// System.out.println(matcher.group(1));
+					msg[1] = line.substring(line.indexOf("ms") - 1, line.indexOf("ms") + 2);
+					msg[2] = line.substring(line.indexOf("TTL=") + 4, line.length());
+					break;
+				}
+				if (line != null)
+
+				{
+					
+				}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}// if
+	
+	public Object[] getMsg() {
+		try {
+			join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return msg;
+	}
+	
+	public static void main(String[] args) {
+		
+		
+		
+	}
+}
+
+
+class portScanner extends Thread {
+	private int port;
+	
+	private boolean isOpen;
+	
+	public portScanner(int port, boolean isOpen) {
+		super();
+		this.port = port;
+		this.isOpen = isOpen;
+	}
+	
+	public int getPort() {
+		return port;
+	}
+	
+	public void setPort(int port) {
+		this.port = port;
+	}
+	
+	public boolean isOpen() {
+		return isOpen;
+	}
+	
+	public void setOpen(boolean isOpen) {
+		this.isOpen = isOpen;
+	}
+	
+}
+
 

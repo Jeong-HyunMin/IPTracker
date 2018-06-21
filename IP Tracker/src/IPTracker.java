@@ -278,7 +278,20 @@ public class IPTracker extends JFrame{
 				JOptionPane.showMessageDialog(null, "잠시만 기다리십시오...", "IP스캔중",
 						JOptionPane.INFORMATION_MESSAGE);
 				for (int i = 1; i < 255; i++) {
-						stats [i-1][0] = fixedIP + "." + i;
+					try {
+						String iP = null;
+						InetAddress inetaddress = InetAddress.getLocalHost();
+						iP = inetaddress.getHostAddress();
+						if (fixedIP + "." + i == iP)	
+							stats [i-1][0] = fixedIP + "." + i + " (Me)";
+						else
+							stats [i-1][0] = fixedIP + "." + i;
+					} catch (UnknownHostException e) {
+						JOptionPane.showMessageDialog(null, "예기치 못한 에러가 발생하였습니다.\n프로그램을 재실행하시길 바랍니다.)",
+								"Unexpected Error",JOptionPane.WARNING_MESSAGE);
+						e.printStackTrace();
+					}
+					
 				}
 				t1.updateUI();
 				thread[] pi = new thread[255];

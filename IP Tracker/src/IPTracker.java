@@ -1,8 +1,6 @@
+
 //전자회로설계과 2학년 1반 16번 정현민
-//JOptionPane.showMessageDialog - 경고창
-//status바 수정하기
-//table 안에 내용 넣기
-//toolbar 완성하기
+//ports 부분 구현 실패
 
 import java.awt.*;
 import java.awt.event.*;
@@ -19,10 +17,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.net.*;
 
-public class IPTracker extends JFrame{
-	
+public class IPTracker extends JFrame {
+
 	String getPort;
-	
+
 	public IPTracker() {
 		super();
 		Font myFont = new Font("Consolas", Font.BOLD, 10);
@@ -272,7 +270,6 @@ public class IPTracker extends JFrame{
 		tfhostname.setText(myHostname);
 		System.out.println("IP : " + myIP + "  /  Hostname : " + myHostname);
 		
-		//수정 필요 - Thread로 구현해야할듯
 		btStart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				JOptionPane.showMessageDialog(null, "잠시만 기다리십시오...", "IP스캔중",
@@ -294,15 +291,14 @@ public class IPTracker extends JFrame{
 					
 				}
 				t1.updateUI();
-				thread[] pi = new thread[255];
+				thread[] t = new thread[255];
 				for(int i=1; i<=254; i++) {
-					pi[i-1] = new thread(fixedIP + "." + (i));
-					pi[i-1].start();
+					t[i-1] = new thread(fixedIP + "." + (i));
+					t[i-1].start();
 				}
 				for(int i=1; i<=254; i++) {
-					Object[] msg = pi[i-1].getMsg();
+					Object[] msg = t[i-1].getMsg();
 					if (msg[1] != null) {
-						//port SCanner
 						
 						ExecutorService es = Executors.newFixedThreadPool(20);
 						String ip = "127.0.0.1";
@@ -312,15 +308,28 @@ public class IPTracker extends JFrame{
 							futures.add(portlsOpen(es, ip, port, timeout));
 						}
 						try {
-							es.awaitTermination(200L, TimeUnit.MILLISECONDS);
-							int openPorts = 0;
-							for (final Future<portScanner> f: futures) {
-								if (f.get().isOpen()) {
-									openPorts++;
-									getPort = Integer.toString(f.get().getPort());
-									break;
+							try {
+
+								es.awaitTermination(200L, TimeUnit.MILLISECONDS);
+
+								int openPorts = 0;
+
+								getPort = "";
+								for (final Future<portScanner> f : futures) {
+									if (f.get().isOpen()) {
+										openPorts++;
+										if (getPort.equals("")) {
+											getPort = Integer.toString(f.get().getPort());
+										} else {
+											getPort += ", " + Integer.toString(f.get().getPort());
+										}
+									}
 								}
+							} catch (Exception ee) {
+
+								ee.printStackTrace();
 							}
+							stats[i][4] = getPort;
 						} catch(Exception ee) {
 							ee.printStackTrace();
 							JOptionPane.showMessageDialog(null, "예기치 못한 에러가 발생하였습니다.\n프로그램을 재실행하시길 바랍니다.)",
@@ -331,9 +340,9 @@ public class IPTracker extends JFrame{
 					}
 		
 					if (msg[1] == null) {
-						msg[3] = "[n/a]";
-						msg[1] = "[n/s]";
+						msg[1] = "[n/a]";
 						msg[2] = "[n/s]";
+						msg[3] = "[n/s]";
 						stats[i-1][4] = "[n/s]";
 						//t1.getColumnModel().getColumn(i).setCellRenderer();
 					} else if (msg[1] == null) {
@@ -378,11 +387,13 @@ public class IPTracker extends JFrame{
 			}*/
 				t1.updateUI();
 		}
-		});
-		
+
+	});
+
 	}
-	
-	public static Future<portScanner> portlsOpen(final ExecutorService es, final String ip, final int port, final int timeout){
+
+	public static Future<portScanner> portlsOpen(final ExecutorService es, final String ip, final int port,
+			final int timeout) {
 		return es.submit(new Callable<portScanner>() {
 			public portScanner call() {
 				try {
@@ -390,13 +401,12 @@ public class IPTracker extends JFrame{
 					socket.connect(new InetSocketAddress(ip, port), timeout);
 					socket.close();
 					return new portScanner(port, true);
-				}catch (Exception ex) {
+				} catch (Exception ex) {
 					return new portScanner(port, false);
 				}
 			}
 		});
 	}
-	
 
 	public Object[][] intializeTableData() {
 		Object[][] results = new Object[254][5];
@@ -407,14 +417,13 @@ public class IPTracker extends JFrame{
 		new IPTracker();
 	}
 
-
 }
 
 class thread extends Thread {
 	private Object[] msg;
 	private String ip;
 
-	public thread (String ip) {
+	public thread(String ip) {
 		this.ip = ip;
 		msg = new Object[4];
 	}
@@ -446,7 +455,7 @@ class thread extends Thread {
 				if (line != null)
 
 				{
-					
+
 				}
 			}
 		} catch (IOException e) {
@@ -455,7 +464,7 @@ class thread extends Thread {
 		}
 
 	}// if
-	
+
 	public Object[] getMsg() {
 		try {
 			join();
@@ -463,45 +472,41 @@ class thread extends Thread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return msg;
 	}
-	
+
 	public static void main(String[] args) {
-		
-		
-		
+
 	}
 }
 
-
 class portScanner extends Thread {
+	
 	private int port;
-	
+
 	private boolean isOpen;
-	
+
 	public portScanner(int port, boolean isOpen) {
 		super();
 		this.port = port;
 		this.isOpen = isOpen;
 	}
-	
+
 	public int getPort() {
 		return port;
 	}
-	
+
 	public void setPort(int port) {
 		this.port = port;
 	}
-	
+
 	public boolean isOpen() {
 		return isOpen;
 	}
-	
+
 	public void setOpen(boolean isOpen) {
 		this.isOpen = isOpen;
 	}
-	
+
 }
-
-

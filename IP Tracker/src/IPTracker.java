@@ -296,7 +296,7 @@ public class IPTracker extends JFrame{
 				t1.updateUI();
 				thread[] pi = new thread[255];
 				for(int i=1; i<=254; i++) {
-					pi[i-1] = new thread(fixedIP + (i));
+					pi[i-1] = new thread(fixedIP + "." + (i));
 					pi[i-1].start();
 				}
 				for(int i=1; i<=254; i++) {

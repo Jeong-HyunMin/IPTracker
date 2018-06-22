@@ -175,7 +175,7 @@ public class IPTracker extends JFrame {
 
 		about.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				JOptionPane.showMessageDialog(null, "Made By 전자회로설계과 20116 정현민", "About",
+				JOptionPane.showMessageDialog(null, "Made By 전자회로설계과 20116 정현민\n\n이 프로그램은 제작자의 실습을 위해 작성되었으며, \n(설마 그럴일은 없겠지만) 상업적인 용도로의 사용은 절대적으로 금하며, \n개인적인 용도로 사용하는 것은 일부 가능합니다.\n\nCopyleft ⓒ 2018 정현민, 상업적인 용도로 절대 사용 금지, '무단' 복제 및 전송 금지 ", "About",
 						JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
@@ -207,6 +207,14 @@ public class IPTracker extends JFrame {
 				JOptionPane.showMessageDialog(null,
 						"새로운 버전은 제작자의 Github에서 확인하십시오.\n :   https://github.com/Jeong-HyunMin/IPTracker.git",
 						"Newer Version", JOptionPane.INFORMATION_MESSAGE);
+			}
+		});
+		
+		GS.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				JOptionPane.showMessageDialog(null,
+						"이 프로그램은 Start 버튼만 누르고 잠시 기다리시면 알아서 IP를 스캔합니다.\n보통 IP스캔을 끝내는데에서는 1분 정도가 소요되며, 사용하고 계시는 컴퓨터의 사양에 따라 예상시간은 달라질 수 있습니다.",
+						"Getting Start", JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
 
